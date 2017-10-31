@@ -24,7 +24,7 @@ static int sstf_dispatch(struct request_queue *q, int force)
 
 	if (!list_empty(&sData->queue)) { //if list is not empty
 		struct request *rq = list_entry(sData->queue.next, struct request, queuelist);
-		printk(KERN_DEBUG "Dispatching Sector: %llu\n",blk_rq_pos(rq));	//display which sector is being dispatched
+		printk(KERN_DEBUG "Dispatching Sector #: %llu\n",blk_rq_pos(rq));	//display which sector is being dispatched
 		list_del_init(&rq->queuelist);
 		elv_dispatch_add_tail(q, rq); //pass request to dispatch
 		return 1;
@@ -41,7 +41,7 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 
 	
 	if (list_empty(&sData->queue)) { //if empty add anywhere in the queue
-		printk(KERN_DEBUG "queue list empty...adding item to queue.\n");
+		printk(KERN_DEBUG "queue list empty...adding item to any position in the queue.\n");
 		list_add(&rq->queuelist, &sData->queue); //add item to the queue 
 	} else {
 
@@ -50,7 +50,7 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 
 		
 			if(blk_rq_pos(cur_node) < blk_rq_pos(rq)){ //if the request sector position is higher than current position
-				printk(KERN_DEBUG "add_request: inserting item in front of current sector\n");
+				printk(KERN_DEBUG "inserting item in front of current sector\n");
 				list_add(&rq->queuelist, &cur_node->queuelist); //Add item to the list in front of current request position
 				break;
 			}
