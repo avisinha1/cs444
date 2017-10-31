@@ -22,9 +22,9 @@ static int sstf_dispatch(struct request_queue *q, int force)
 {
 	struct sstf_data *sData = q->elevator->elevator_data;
 
-	if (!list_empty(&sData->queue)) {
+	if (!list_empty(&sData->queue)) { //if list is not empty
 		struct request *rq = list_entry(sData->queue.next, struct request, queuelist);
-		printk(KERN_DEBUG "Dispatching Sector: %llu\n",blk_rq_pos(rq));	
+		printk(KERN_DEBUG "Dispatching Sector: %llu\n",blk_rq_pos(rq));	//display which sector is being dispatched
 		list_del_init(&rq->queuelist);
 		elv_dispatch_add_tail(q, rq); //pass request to dispatch
 		return 1;
@@ -42,7 +42,7 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 	
 	if (list_empty(&sData->queue)) { //if empty add anywhere in the queue
 		printk(KERN_DEBUG "queue list empty...adding item to queue.\n");
-		list_add(&rq->queuelist, &sData->queue);
+		list_add(&rq->queuelist, &sData->queue); //add item to the queue 
 	} else {
 
 		list_for_each(cur_pos,&sData->queue) { //list request to iterate
