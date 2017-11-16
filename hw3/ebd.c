@@ -32,18 +32,11 @@ static char* key = "password"; //AES encryption key
 module_param(key, charp, 0);
 /* END GLOBALS */
 
-
 //The device request queue
 static struct request_queue *queue;
 
-//device operations structure
-static struct block_device_operations s_dev_operations = {
-		.owner  = THIS_MODULE,
-		.getgeo = s_getgeo
-};
-
-//Our internal device 
-static struct s_dev {
+//Our internal device representing ebd0
+static struct ebd_dev {
 	
 	unsigned long size; //Device size in sectors
 	spinlock_t lock; //Mutual exclusion
@@ -64,7 +57,7 @@ static void print_hex(u8 *ptr, unsigned int length) {
 }
 
 //I/O Handler
-static void s_transfer(struct s_dev *dev, sector_t sector, unsigned long nsect, char *buffer, int write) {
+static void ebd_transfer(struct ebd_dev *dev, sector_t sector, unsigned long nsect, char *buffer, int write) {
 
 	u8 *hex_str, *hex_disk, *hex_buf;
 	unsigned long offset = sector*block_device_size;
@@ -115,18 +108,18 @@ static void s_transfer(struct s_dev *dev, sector_t sector, unsigned long nsect, 
 	}
 }
 
-static void s_encrypt_request(struct request_queue *q) {
+static void ebd_encrypt_request(struct request_queue *q) {
 	struct request *rq;
-	rq = blk_fetch_request(q); //
+	rq = blk_fetch_request(q); 
 	while (rq!= NULL) {
 		
 		if (rq== NULL || (rq->cmd_type != REQ_TYPE_FS)) {
-			printk (KERN_NOTICE "Skip non-cmd request\n");
+			printk (KERN_NOTICE "Skip non-CMD request\n");
 			__blk_end_request_all(rq, -EIO);
 			continue;
 		}
 
-		s_transfer(&Device, blk_rq_pos(rq), blk_rq_cur_sectors(rq),
+		ebd_transfer(&Device, blk_rq_pos(rq), blk_rq_cur_sectors(rq),
 			bio_data(rq->bio), rq_data_dir(rq));
 
 		if ( ! __blk_end_request_cur(rq, 0) ) {
@@ -136,7 +129,7 @@ static void s_encrypt_request(struct request_queue *q) {
 }
 
 //get geometry. Since we have no real geometry, this is made up
-int s_getgeo(struct block_device * block_device, struct hd_geometry * geo) {
+int ebd_getgeo(struct block_device * block_device, struct hd_geometry * geo) {
 	long size;   
 	size = Device.size * (block_device_size / KERNEL_SECTOR_SIZE);
 	geo->cylinders = (size & ~0x3f) >> 6;
@@ -146,9 +139,14 @@ int s_getgeo(struct block_device * block_device, struct hd_geometry * geo) {
 	return 0;
 }
 
+//device operations structure
+static struct block_device_operations ebd_dev_operations = {
+		.owner  = THIS_MODULE,
+		.getgeo = ebd_getgeo
+};
 
 //initialize block device
-static int __init s_init_device(void) {
+static int __init ebd_init_device(void) {
 
 	//initialize internal device
 	Device.size = drive_size * block_device_size;
@@ -158,19 +156,19 @@ static int __init s_init_device(void) {
 		return -ENOMEM;
 	
 	//allocation of request queue
-	queue = blk_init_queue(s_encrypt_request, &Device.lock);
+	queue = blk_init_queue(ebd_encrypt_request, &Device.lock);
 	if (queue == NULL)
 		goto out;
 	blk_queue_block_device_size(queue, block_device_size);
 	
 	//registration
-	major_num = register_blkdev(major_num, "ebd"); //register block device with the kernel (ebd)
+	major_num = register_blkdev(major_num, "ebd"); //register block driver with the kernel, ebd
 	if (major_num < 0) {
 		printk(KERN_WARNING "ebd: unable to get major number\n");
 		goto out;
 	}
 
-    //allocate AES encrryption cipher
+    //allocate AES encryption cipher
 	crp = crypto_alloc_cipher("aes",0,0);
 	if(!crp){
 		printk(KERN_WARNING "ebd: UNABLE TO ALLOCATE CRYPTO.\n");
@@ -186,7 +184,7 @@ static int __init s_init_device(void) {
 		goto out_unregister;
 	Device.gd->major = major_num;
 	Device.gd->first_minor = 0;
-	Device.gd->fops = &s_dev_operations;
+	Device.gd->fops = &ebd_dev_operations;
 	Device.gd->private_data = &Device;
 	strcpy(Device.gd->disk_name, "ebd0");
 	set_capacity(Device.gd, drive_size);
@@ -204,16 +202,18 @@ out:
 	return -ENOMEM;
 }
 
-static void __exit s_exit_device(void)
+static void __exit ebd_exit_dev(void)
 {	
 	crypto_free_cipher(crp); //free crypto
 	del_gendisk(Device.gd);
 	put_disk(Device.gd);
-	unregister_blkdev(major_num, "ebd"); //unregister the block device
+	unregister_blkdev(major_num, "ebd"); //unregister the block driver
 	blk_cleanup_queue(queue);
 
 	printk("ebd: block device deallocated\n");
 }
 
-module_init(s_init_device);
-module_exit(s_exit_device);
+module_init(ebd_init_device);
+module_exit(ebd_exit_dev);
+
+MODULE_LICENSE("Dual MIT/GPL");
