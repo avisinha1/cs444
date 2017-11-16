@@ -219,5 +219,3 @@ static void __exit ebd_exit_dev(void)
 
 module_init(ebd_init_device);
 module_exit(ebd_exit_dev);
-
-
