@@ -1,4 +1,4 @@
-filename=hw3writeup
+filename=writeup
 
 pdf: ps
 	ps2pdf ${filename}.ps
