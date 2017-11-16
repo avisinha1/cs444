@@ -1,7 +1,10 @@
 /*
 Name: Omar Elgebaly, Aviral Sinha
 Class: Operating Systems II - Fall 2017
-Source: https://static.lwn.net/images/pdf/LDD3/ch16.pdf
+Simple Block Driver Implementation
+*/
+/*
+Sources consulted: http://blog.superpat.com/2010/05/04/a-simple-block-driver-for-linux-kernel-2-6-31/
 */
 
 #include <linux/module.h>
@@ -19,6 +22,8 @@ Source: https://static.lwn.net/images/pdf/LDD3/ch16.pdf
 
 #define KERNEL_SECTOR_SIZE 512 //The kernel expects to be dealing with devices that implement 512-byte sectors
 
+MODULE_LICENSE("Dual MIT/GPL");
+static char *Version = "1.4";
 
 /* BEGIN GLOBALS */
 static struct crypto_cipher *crp; //crypto API struct 
@@ -46,10 +51,10 @@ static struct ebd_dev {
 } Device;
 
 //helper function to print hex data at address
-static void print_hex(u8 *ptr, unsigned int length) {   
+static void print_hex(u8 *ptr, unsigned int len) {   
 
 	int i;
-	for (i = 0 ; i < length ; i++){
+	for (i = 0 ; i < len ; i++){
 		printk("%02x ", ptr[i]);
 	}
 	printk("\n");
@@ -62,7 +67,6 @@ static void ebd_transfer(struct ebd_dev *dev, sector_t sector, unsigned long nse
 	u8 *hex_str, *hex_disk, *hex_buf;
 	unsigned long offset = sector*block_device_size;
 	unsigned long nbytes = nsect*block_device_size;
-	
 	unsigned int i;
  
 	hex_disk = dev->data + offset;
@@ -196,7 +200,7 @@ static int __init ebd_init_device(void) {
 	return 0;
 
 out_unregister:
-	unregister_blkdev(major_num, "ebd");
+	unregister_blkdev(major_num, "ebd"); //unregister device
 out:
 	vfree(Device.data);
 	return -ENOMEM;
@@ -205,7 +209,7 @@ out:
 static void __exit ebd_exit_dev(void)
 {	
 	crypto_free_cipher(crp); //free crypto
-	del_gendisk(Device.gd);
+	del_gendisk(Device.gd); //free disk
 	put_disk(Device.gd);
 	unregister_blkdev(major_num, "ebd"); //unregister the block driver
 	blk_cleanup_queue(queue);
@@ -216,4 +220,4 @@ static void __exit ebd_exit_dev(void)
 module_init(ebd_init_device);
 module_exit(ebd_exit_dev);
 
-MODULE_LICENSE("Dual MIT/GPL");
+
