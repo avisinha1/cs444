@@ -1,5 +1,5 @@
 /*
-Name: Omar Elgebaly, Aviral Sinha
+Name: Aviral Sinha, Omar Elgebaly
 Class: Operating Systems II - Fall 2017
 Simple Block Driver Implementation
 */
@@ -163,7 +163,7 @@ static int __init ebd_init_device(void) {
 	queue = blk_init_queue(ebd_encrypt_request, &Device.lock);
 	if (queue == NULL)
 		goto out;
-	blk_queue_block_device_size(queue, block_device_size);
+	blk_queue_logical_block_size(queue, block_device_size);
 	
 	//registration
 	major_num = register_blkdev(major_num, "ebd"); //register block driver with the kernel, ebd
