@@ -1,0 +1,91 @@
+\documentclass[onecolumn, draftclsnofoot,10pt, compsoc]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{setspace}
+
+\usepackage{geometry}
+\geometry{textheight=9.5in, textwidth=7in}
+
+
+\def \DocType{		WriteUp
+				}
+			
+\newcommand{\NameSigPair}[1]{\par
+\makebox[2.75in][r]{#1} \hfil 	\makebox[3.25in]{\makebox[2.25in]{\hrulefill} \hfill		\makebox[.75in]{\hrulefill}}
+\par\vspace{-12pt} \textit{\tiny\noindent
+\makebox[2.75in]{} \hfil		\makebox[3.25in]{\makebox[2.25in][r]{Signature} \hfill	\makebox[.75in][r]{Date}}}}
+% 3. If the document is not to be signed, uncomment the RENEWcommand below
+\renewcommand{\NameSigPair}[1]{#1}
+
+%group members: Aviral Sinha, Omar Elgebaly
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\pagenumbering{arabic}
+
+
+\section{Design}
+According to first fit policy for memory allocation of P parts, the algorithm will scan the memory and find the first portion of free parts that are larger or equal to P in size. Its a quick and efficient algorithm but cuts a large port of free parts into small pieces causing allocations that need a large portion of parts to fail. The total number of free parts exceeds the number requested, which is a internal fragmentation problem. 
+
+The best fit policy fulfills a memory allocation request of P parts, scans the memory and finds the best fit of free parts for the requested size P instead of returning the first part that it finds which might be larger or equal in size to P. This is accomplished by avoiding the internal fragmentation problem. 
+
+\section{Questions}
+
+\begin{enumerate}
+\item \textbf{What do you think the main point of this assignment is?}
+	The main
+
+\item \textbf{How did you personally approach the problem? Design decisions, algorithm, etc.}
+
+\item \textbf{How did you ensure your solution was correct? Testing details, for instance.}
+
+\item \textbf{What did you learn?}
+
+\item \textbf{How should the TA test your patch?}
+
+\end{enumerate}
+
+\section{Version Control}
+\subsubsection{Version Control (Link:https://github.com/avisinha1/cs444/commits/master)}
+\begin{center}
+	\begin{tabular}{ | l | c | r|}
+		\hline
+		Who & Work & Date \\
+		\hline
+		Omar & original simple block driver & 11/15/2017\\
+		\hline
+		Avi & uploaded encrypted block driver. needs comments. & 11/15/2017\\
+		\hline
+		Omar & uploaded encrypted block driver w/ some comments. & 11/15/2017 \\
+		\hline
+		Omar & improved readability & 11/15/2017 \\
+		\hline
+		Avi & added some more comments & 11/15/2017 \\
+		\hline
+	\end{tabular}
+\end{center}	
+
+\section{Work Log}
+
+	November 9th: Began looking at assignment details and understanding what its asking 
+	
+	November 10th: Looked at classnotes, lecture recordings, and reccommended readings to get a better understanding before beginning the implementation
+	
+	November 12th: Began writing RAM device driver and implementing linux crypto API
+	
+	November 13th: Started documentation of our work so it could be added to the write up
+	
+	November 13th: Began understanding how to run our patch within the VM environment so when we complete the implementation we can properly test it. 
+	
+	November 14th: Started putting contents into LaTex file for proper documentation
+	
+	November 14th: Completed implementation and preparing it for testing and debugging
+	
+	November 15th: Began running tests on kernel and figuring out how to combat various problems that would be coming up
+	
+	November 15th: Added data from version control log into LaTex as well as completed linux patch file
+	
+	November 15th: Finished LaTex write up and turned in on TEACH as a tarball
+	
+
+\end{document}
