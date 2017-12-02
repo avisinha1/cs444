@@ -882,6 +882,10 @@ asmlinkage long sys_execveat(int dfd, const char __user *filename,
 			const char __user *const __user *argv,
 			const char __user *const __user *envp, int flags);
 
+
+
+/* additions for best fit */
+
 asmlinkage long sys_free_slob_space(void);
 asmlinkage long sys_total_slob_space(void);
 
