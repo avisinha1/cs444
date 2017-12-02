@@ -1,0 +1,163 @@
+--- slobold.c	2017-12-01 22:24:41.618895232 -0800
++++ slob.c	2017-12-01 22:24:36.449800274 -0800
+@@ -67,11 +67,12 @@
+ #include <linux/rcupdate.h>
+ #include <linux/list.h>
+ #include <linux/kmemleak.h>
+-
+ #include <trace/events/kmem.h>
+-
+ #include <linux/atomic.h>
+ 
++#include <linux/syscalls.h>
++#include <linux/linkage.h>
++
+ #include "slab.h"
+ /*
+  * slob_block has a field 'units', which indicates size of block if +ve,
+@@ -87,6 +88,11 @@
+ typedef s32 slobidx_t;
+ #endif
+ 
++/*calculate space used*/
++unsigned long slob_num_pages = 0; 
++/*calculate free spacce*/
++unsigned long units_free = 0;
++
+ struct slob_block {
+ 	slobidx_t units;
+ };
+@@ -133,7 +139,6 @@
+ 	struct rcu_head head;
+ 	int size;
+ };
+-
+ /*
+  * slob_lock protects all slob allocator structures.
+  */
+@@ -272,6 +277,10 @@
+ 	struct list_head *slob_list;
+ 	slob_t *b = NULL;
+ 	unsigned long flags;
++	
++	struct list_head *temp;	
++	struct page *sp_alt = NULL;
++	units_free = 0;
+ 
+ 	if (size < SLOB_BREAK1)
+ 		slob_list = &free_slob_small;
+@@ -295,20 +304,39 @@
+ 		if (sp->units < SLOB_UNITS(size))
+ 			continue;
+ 
+-		/* Attempt to alloc */
+-		prev = sp->lru.prev;
+-		b = slob_page_alloc(sp, size, align);
+-		if (!b)
+-			continue;
++        if(sp_alt == NULL){
++			sp_alt = sp;
++		}
++
++        /*if current page is smaller than our smallest option so far, replace with new smallest*/
++        if(sp->units < sp_alt->units)
++                sp_alt = sp;
++		}	
++
++    /*Allocate*/
++    if(sp_alt != NULL){
++        b = slob_page_alloc(sp_alt, size, align);
++    }
++
++    /*Loop each linked list to find free space*/
++    temp = &free_slob_small;
++	
++    list_for_each_entry(sp, temp, lru) {
++        units_free += sp->units;
++    }
++	
++    temp = &free_slob_medium;
++    list_for_each_entry(sp, temp, lru) { 
++        units_free += sp->units;
++    }
++	
++    temp = &free_slob_large;
++    list_for_each_entry(sp, temp, lru) {
++        units_free += sp->units;
++
++    }
++
+ 
+-		/* Improve fragment distribution and reduce our average
+-		 * search time by starting our next search here. (see
+-		 * Knuth vol 1, sec 2.5, pg 449) */
+-		if (prev != slob_list->prev &&
+-				slob_list->next != prev->next)
+-			list_move_tail(slob_list, prev->next);
+-		break;
+-	}
+ 	spin_unlock_irqrestore(&slob_lock, flags);
+ 
+ 	/* Not enough space: must allocate a new page */
+@@ -328,6 +356,7 @@
+ 		b = slob_page_alloc(sp, size, align);
+ 		BUG_ON(!b);
+ 		spin_unlock_irqrestore(&slob_lock, flags);
++        slob_num_pages++;
+ 	}
+ 	if (unlikely((gfp & __GFP_ZERO) && b))
+ 		memset(b, 0, size);
+@@ -362,6 +391,7 @@
+ 		__ClearPageSlab(sp);
+ 		page_mapcount_reset(sp);
+ 		slob_free_pages(b, 0);
++        slob_num_pages--;
+ 		return;
+ 	}
+ 
+@@ -630,6 +660,16 @@
+ 	.align = ARCH_KMALLOC_MINALIGN,
+ };
+ 
++/*returns the amount of space used*/
++asmlinkage long sys_slob_space_used(void){
++    long slob_total_space_used = SLOB_UNITS(PAGE_SIZE) * slob_num_pages;
++    return slob_total_space_used;
++}
++/*returns the amount of free space*/
++asmlinkage long sys_slob_space_free(void){
++    return units_free;
++}
++
+ void __init kmem_cache_init(void)
+ {
+ 	kmem_cache = &kmem_cache_boot;
+@@ -639,4 +679,4 @@
+ void __init kmem_cache_init_late(void)
+ {
+ 	slab_state = FULL;
+-}
++}
+\ No newline at end of file
+--- syscall_32old.tbl	2017-12-01 22:26:03.862365601 -0800
++++ syscall_32.tbl	2017-12-01 22:26:01.975332235 -0800
+@@ -365,3 +365,5 @@
+ 356	i386	memfd_create		sys_memfd_create
+ 357	i386	bpf			sys_bpf
+ 358	i386	execveat		sys_execveat			stub32_execveat
++359 i386    free_slob_space     sys_free_slob_space
++360 i386    total_slob_space    sys_total_slob_space
+\ No newline at end of file
+--- syscallsold.h	2017-12-01 22:26:45.103094815 -0800
++++ syscalls.h	2017-12-01 22:26:44.035075930 -0800
+@@ -883,4 +883,10 @@
+ 			const char __user *const __user *envp, int flags);
+ 
+ 
++
++/* additions for best fit */
++
++asmlinkage long sys_free_slob_space(void);
++asmlinkage long sys_total_slob_space(void);
++
+ #endif
